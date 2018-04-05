@@ -27,8 +27,8 @@ atom .
 And, update the `knexfile.js` file with the following connection information for each environment.
 
 ```javascript
-'postgres://localhost/bookshelf_dev'
-'postgres://localhost/bookshelf_test'
+'postgres://awray:doot@localhost:5433/bookshelf_dev'
+'postgres://awray:doot@localhost:5433/bookshelf_test'
 ```
 
 Then, generate a cryptographic key that'll be used for the JWT signature. You'll learn what a JWT is and why it's signed in an upcoming lesson.

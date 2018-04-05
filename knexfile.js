@@ -1,9 +1,15 @@
 'use strict';
 
 module.exports = {
-  development: {},
+  development: {
+    client:'pg',
+    connection:'postgres://awray:doot@localhost:5433/bookshelf_dev'
+  },
 
-  test: {},
+  test: {
+    client:'pg',
+    connection:'postgres://awray:doot@localhost:5433/bookshelf_test'
+  },
 
   production: {}
 };
