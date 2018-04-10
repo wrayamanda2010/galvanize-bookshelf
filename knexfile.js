@@ -11,5 +11,8 @@ module.exports = {
     connection:'postgres://awray:doot@localhost:5433/bookshelf_test'
   },
 
-  production: {}
+  production: {
+    client: 'pg',
+    
+  }
 };
