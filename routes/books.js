@@ -71,7 +71,7 @@ router.patch('/:id', (req, res, next) => {
 
 router.delete('/:id', (req, res, next) => {
   knex('books')
-    .select('title', 'author', 'genre', 'description', 'coverUrl')
+    .select('title', 'author', 'genre', 'description', 'cover_url')
     .then((data) => {
       res.json(humps.camelizeKeys(data[0]))
     })
