@@ -5,93 +5,92 @@ const humps = require('humps')
 const knex = require('../knex')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
+const boom = require('boom')
 
 // eslint-disable-next-line new-cap
 const router = express.Router();
 
-// YOUR CODE HERE
-router.get('/', (req, res, next) => {
-  if (req.cookies.token) {
-    const token = jwt.decode(req.cookies.token)
-    const {
-      id
-    } = token
-    knex('favorites')
-      .where('user_id', id)
-      .select('favorites.id', 'favorites.book_id', 'favorites.user_id', 'books.created_at', 'books.updated_at', 'books.title', 'books.author', 'books.genre', 'books.description', 'books.cover_url')
-      .join('books', 'favorites.book_id', 'books.id')
-      .then((favorites) => {
-        res.json(humps.camelizeKeys(favorites))
-      })
-  } else {
-    res.status(401).type('text/plain').send('Unauthorized')
-  }
-})
+  router.use(isAuthorized)
 
-router.get('/check', (req, res, next) => {
-  if (req.cookies.token) {
-    const token = jwt.decode(req.cookies.token)
-    const {
-      id
-    } = token
-    knex('favorites')
-      .where('user_id', id)
-      .join('books', 'books.id', 'favorites.book_id')
-      .where('book_id', req.query.bookId)
-      .then((result) => {
-        if (result.length < 1) {
-          res.json(false)
-        } else {
-          if (parseInt(req.query.bookId) === result[0].book_id) {
-            res.json(true)
-          } else {
-            res.json(false)
+  function isAuthorized(req, res, next) {
+    const token = req.cookies.token
+    if (token) {
+      const decode = jwt.decode(token)
+      knex('users')
+        .select('id')
+        .where('email', decode.data)
+        .then((rows) => {
+          if (rows.length === 1) {
+            req.userId = rows[0].id
+            next()
           }
+          else {
+            next(boom.badRequest('Email must be unique'))
+          }
+        })
+        .catch((err) => {
+          console.log(err)
+        })
+    }
+    else {
+      next(boom.unauthorized())
+    }
+  }
+
+  router.get('/', (req, res, next) => {
+    knex('favorites')
+      .innerJoin('books', 'books.id', 'favorites.book_id')
+      .select('*')
+      .then((rows) => rows.map((data) => humps.camelizeKeys(data)))
+      .then((rows) => {
+        res.json(rows)
+      })
+      .catch((err) => console.log(err))
+  })
+
+  router.get('/check', (req, res, next) => {
+    const bookId = req.query.bookId
+    knex('favorites')
+      .select('*')
+      .where('book_id', bookId)
+      .then((rows) => {
+        if (rows.length > 0) {
+          res.json(true)
+        } else {
+          res.json(false)
         }
       })
-  } else {
-    res.status(401).type('text/plain').send('Unauthorized')
-  }
-})
+  })
 
-router.post('/', (req, res, next) => {
-  if (req.cookies.token) {
-    const token = jwt.decode(req.cookies.token)
-    const {
-      id
-    } = token
+  router.post('/', (req, res, next) => {
+    const { bookId } = req.body
     knex('favorites')
       .insert({
-        book_id: req.body.bookId,
-        user_id: id
+        book_id: bookId,
+        user_id: req.userId
       })
-      .returning(['id', 'book_id', 'user_id'])
-      .then((newFavorite) => {
-        res.json(humps.camelizeKeys(newFavorite[0]))
-      })
-  } else {
-    res.status(401).type('text/plain').send('Unauthorized')
-  }
-})
-
-router.delete('/', (req, res, next) => {
-  if (req.cookies.token) {
-    const token = jwt.decode(req.cookies.token)
-    const {
-      id
-    } = token
-    knex('favorites')
-      .where({
-        book_id: req.body.bookId
-      })
-      .del()
-      .returning(['book_id', 'user_id'])
+      .returning('*')
       .then((result) => {
         res.json(humps.camelizeKeys(result[0]))
       })
-  } else {
-    res.status(401).type('text/plain').send('Unauthorized')
-  }
+  })
+  
+router.delete('/', (req, res, next) => {
+  const { bookId } = req.body
+  knex('favorites')
+    .del()
+    .returning(['book_id', 'user_id'])
+    .where('book_id', bookId)
+    .then((rows) => {
+      return rows.map((data) => humps.camelizeKeys(data))
+    })
+    .then((result) => {
+      res.json(result[0])
+    })
+    .catch((err) => console.log(err))
 })
+
+
+
 
 module.exports = router;
